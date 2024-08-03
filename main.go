@@ -2,7 +2,9 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	sh "github.com/celestiaorg/go-square/v2/share"
 )
@@ -15,6 +17,12 @@ import (
 
 	TODO: check the values of the shares, not just the lengths.
 */
+
+type testVector struct {
+	Namespace string `json:"namespace"`
+	Data      string `json:"data"`
+	Shares    string `json:"shares"`
+}
 
 func main() {
 	// Create a random namespace
@@ -52,6 +60,8 @@ func main() {
 	suffix1Namespace := sh.MustNewNamespace(0, suffix1NamespaceId)
 	fmt.Println("Suffix 1 Namespace:", suffix1Namespace)
 
+	vecs := []testVector{}
+
 	for _, n := range []sh.Namespace{randomNamespace, zeroNamespace, prefix1Namespace, suffix1Namespace} {
 
 		// We choose lengths 478 and 479 because that is the boundary between needing 1 or 2 shares.
@@ -61,11 +71,11 @@ func main() {
 		}
 		blob, _ := sh.NewBlob(n, zeroes478, 0, nil)
 		shares, _ := splitBlobs(blob)
-		fmt.Println("expect 1 actual", len(shares))
-		for _, s := range shares {
-			fmt.Printf("%x", s.ToBytes())
-		}
-		fmt.Printf("\n")
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", zeroes478),
+			Shares:    toHexString(shares),
+		})
 
 		zeroes479 := make([]byte, 479)
 		for i := range zeroes479 {
@@ -73,11 +83,11 @@ func main() {
 		}
 		blob2, _ := sh.NewBlob(n, zeroes479, 0, nil)
 		shares2, _ := splitBlobs(blob2)
-		fmt.Println("expect 2 actual", len(shares2))
-		for _, s := range shares2 {
-			fmt.Printf("%x", s.ToBytes())
-		}
-		fmt.Printf("\n")
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", zeroes479),
+			Shares:    toHexString(shares2),
+		})
 
 		// We try prefix and suffix 1 values, to catch any weirdness that might occur at the boundary.
 		prefix1_478 := make([]byte, 478)
@@ -87,7 +97,11 @@ func main() {
 		}
 		blob3, _ := sh.NewBlob(n, prefix1_478, 0, nil)
 		shares3, _ := splitBlobs(blob3)
-		fmt.Println("expect 1 actual", len(shares3))
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", prefix1_478),
+			Shares:    toHexString(shares3),
+		})
 
 		suffix1_478 := make([]byte, 478)
 		for i := range suffix1_478[:477] {
@@ -96,7 +110,11 @@ func main() {
 		suffix1_478[477] = 1
 		blob4, _ := sh.NewBlob(n, suffix1_478, 0, nil)
 		shares4, _ := splitBlobs(blob4)
-		fmt.Println("expect 1 actual", len(shares4))
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", suffix1_478),
+			Shares:    toHexString(shares4),
+		})
 
 		suffix1_479 := make([]byte, 479)
 		for i := range suffix1_479[:478] {
@@ -105,7 +123,11 @@ func main() {
 		suffix1_479[478] = 1
 		blob5, _ := sh.NewBlob(n, suffix1_479, 0, nil)
 		shares5, _ := splitBlobs(blob5)
-		fmt.Println("expect 2 actual", len(shares5))
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", suffix1_479),
+			Shares:    toHexString(shares5),
+		})
 
 		prefix1_479 := make([]byte, 479)
 		prefix1_479[0] = 1
@@ -114,21 +136,51 @@ func main() {
 		}
 		blob6, _ := sh.NewBlob(n, prefix1_479, 0, nil)
 		shares6, _ := splitBlobs(blob6)
-		fmt.Println("expect 2 actual", len(shares6))
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", prefix1_479),
+			Shares:    toHexString(shares6),
+		})
 
 		randomKilobyte := make([]byte, 1024)
 		rand.Read(randomKilobyte)
 		blob7, _ := sh.NewBlob(n, randomKilobyte, 0, nil)
 		shares7, _ := splitBlobs(blob7)
-		fmt.Println("len randomKilobyteBlob", len(shares7))
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", randomKilobyte),
+			Shares:    toHexString(shares7),
+		})
 
 		random10kb := make([]byte, 1024*10)
 		rand.Read(random10kb)
 		blob8, _ := sh.NewBlob(n, random10kb, 0, nil)
 		shares8, _ := splitBlobs(blob8)
-		fmt.Println("len random10kbBlob", len(shares8))
+		vecs = append(vecs, testVector{
+			Namespace: fmt.Sprintf("%x", n.Bytes()),
+			Data:      fmt.Sprintf("%x", random10kb),
+			Shares:    toHexString(shares8),
+		})
+
 	}
 
+	jsonData, _ := json.Marshal(vecs)
+	file, _ := os.Create("testVectors.json")
+	defer file.Close()
+	_, err := file.Write(jsonData)
+	if err != nil {
+		fmt.Println("Error writing to file:", err)
+		return
+	}
+
+}
+
+func toHexString(shares []sh.Share) string {
+	var result string
+	for _, share := range shares {
+		result += fmt.Sprintf("%x", share.ToBytes())
+	}
+	return result
 }
 
 // splitBlobs splits the provided blobs into shares.
