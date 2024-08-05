@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,36 +35,20 @@ func main() {
 	fmt.Println("Namespace ID:", randomNamespaceId)
 	randomNamespace := sh.MustNewNamespace(0, randomNamespaceId)
 
-	// Create a all zero namespace
-	zeroNamespaceId := make([]byte, 28)
-	for i := 0; i < 28; i++ {
-		randomNamespaceId[i] = 0
+	// Lowest application namespace
+	// Namespaces below this value are not valid for application usage
+	// 0x0000000000000000000000000000000000000000000000000000000100
+	lowestNsBytes, err := hex.DecodeString("00000000000000000000000000000000000000000000000000000100")
+	if err != nil {
+		fmt.Println("Error decoding hex string:", err)
+		return
 	}
-	zeroNamespace := sh.MustNewNamespace(0, zeroNamespaceId)
-	fmt.Println("Zero Namespace:", zeroNamespace)
-
-	// Create a prefix 1 namespace
-	prefix1NamespaceId := make([]byte, 28)
-	for i := 1; i < 28; i++ {
-		prefix1NamespaceId[i] = 0
-	}
-	prefix1NamespaceId[18] = 1
-	prefix1Namespace := sh.MustNewNamespace(0, prefix1NamespaceId)
-	fmt.Println("Prefix 1 Namespace:", prefix1Namespace)
-
-	// Create a suffix 1 namespace
-	suffix1NamespaceId := make([]byte, 28)
-	for i := 0; i < 27; i++ {
-		suffix1NamespaceId[i] = 0
-	}
-	suffix1NamespaceId[27] = 1
-	suffix1Namespace := sh.MustNewNamespace(0, suffix1NamespaceId)
-	fmt.Println("Suffix 1 Namespace:", suffix1Namespace)
+	lowestNamespace := sh.MustNewNamespace(0, lowestNsBytes)
+	fmt.Println("Zero Namespace:", lowestNamespace)
 
 	vecs := []testVector{}
 
-	for _, n := range []sh.Namespace{randomNamespace, zeroNamespace, prefix1Namespace, suffix1Namespace} {
-
+	for _, n := range []sh.Namespace{randomNamespace, lowestNamespace} {
 		// We choose lengths 478 and 479 because that is the boundary between needing 1 or 2 shares.
 		zeroes478 := make([]byte, 478)
 		for i := range zeroes478 {
@@ -71,6 +56,10 @@ func main() {
 		}
 		blob, _ := sh.NewBlob(n, zeroes478, 0, nil)
 		shares, _ := splitBlobs(blob)
+		out := ""
+		for _, share := range shares {
+			out = out + fmt.Sprintf("%x", share.ToBytes())
+		}
 		vecs = append(vecs, testVector{
 			Namespace: fmt.Sprintf("%x", n.Bytes()),
 			Data:      fmt.Sprintf("%x", zeroes478),
@@ -167,7 +156,7 @@ func main() {
 	jsonData, _ := json.Marshal(vecs)
 	file, _ := os.Create("testVectors.json")
 	defer file.Close()
-	_, err := file.Write(jsonData)
+	_, err = file.Write(jsonData)
 	if err != nil {
 		fmt.Println("Error writing to file:", err)
 		return
