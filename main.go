@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 
+	inc "github.com/celestiaorg/go-square/v2/inclusion"
 	sh "github.com/celestiaorg/go-square/v2/share"
+	"github.com/cometbft/cometbft/crypto/merkle"
 )
 
 /*
@@ -55,6 +57,7 @@ func main() {
 			zeroes478[i] = 0
 		}
 		blob, _ := sh.NewBlob(n, zeroes478, 0, nil)
+		cmmitment := inc.CreateCommitment(blob, merkle.HashFromByteSlices)
 		shares, _ := splitBlobs(blob)
 		out := ""
 		for _, share := range shares {
