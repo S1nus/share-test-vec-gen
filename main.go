@@ -22,9 +22,10 @@ import (
 */
 
 type testVector struct {
-	Namespace string `json:"namespace"`
-	Data      string `json:"data"`
-	Shares    string `json:"shares"`
+	Namespace  string `json:"namespace"`
+	Data       string `json:"data"`
+	Shares     string `json:"shares"`
+	Commitment string `json:"commitment"`
 }
 
 func main() {
@@ -57,16 +58,21 @@ func main() {
 			zeroes478[i] = 0
 		}
 		blob, _ := sh.NewBlob(n, zeroes478, 0, nil)
-		cmmitment := inc.CreateCommitment(blob, merkle.HashFromByteSlices)
+		commitment, err := inc.CreateCommitment(blob, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares, _ := splitBlobs(blob)
 		out := ""
 		for _, share := range shares {
 			out = out + fmt.Sprintf("%x", share.ToBytes())
 		}
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", zeroes478),
-			Shares:    toHexString(shares),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", zeroes478),
+			Shares:     toHexString(shares),
+			Commitment: fmt.Sprintf("%x", commitment),
 		})
 
 		zeroes479 := make([]byte, 479)
@@ -74,11 +80,17 @@ func main() {
 			zeroes479[i] = 0
 		}
 		blob2, _ := sh.NewBlob(n, zeroes479, 0, nil)
+		commitment2, err := inc.CreateCommitment(blob2, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares2, _ := splitBlobs(blob2)
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", zeroes479),
-			Shares:    toHexString(shares2),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", zeroes479),
+			Shares:     toHexString(shares2),
+			Commitment: fmt.Sprintf("%x", commitment2),
 		})
 
 		// We try prefix and suffix 1 values, to catch any weirdness that might occur at the boundary.
@@ -88,11 +100,17 @@ func main() {
 			prefix1_478[i] = 0
 		}
 		blob3, _ := sh.NewBlob(n, prefix1_478, 0, nil)
+		commitment3, err := inc.CreateCommitment(blob3, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares3, _ := splitBlobs(blob3)
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", prefix1_478),
-			Shares:    toHexString(shares3),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", prefix1_478),
+			Shares:     toHexString(shares3),
+			Commitment: fmt.Sprintf("%x", commitment3),
 		})
 
 		suffix1_478 := make([]byte, 478)
@@ -101,11 +119,17 @@ func main() {
 		}
 		suffix1_478[477] = 1
 		blob4, _ := sh.NewBlob(n, suffix1_478, 0, nil)
+		commitment4, err := inc.CreateCommitment(blob4, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares4, _ := splitBlobs(blob4)
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", suffix1_478),
-			Shares:    toHexString(shares4),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", suffix1_478),
+			Shares:     toHexString(shares4),
+			Commitment: fmt.Sprintf("%x", commitment4),
 		})
 
 		suffix1_479 := make([]byte, 479)
@@ -114,11 +138,17 @@ func main() {
 		}
 		suffix1_479[478] = 1
 		blob5, _ := sh.NewBlob(n, suffix1_479, 0, nil)
+		commitment5, err := inc.CreateCommitment(blob5, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares5, _ := splitBlobs(blob5)
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", suffix1_479),
-			Shares:    toHexString(shares5),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", suffix1_479),
+			Shares:     toHexString(shares5),
+			Commitment: fmt.Sprintf("%x", commitment5),
 		})
 
 		prefix1_479 := make([]byte, 479)
@@ -127,31 +157,49 @@ func main() {
 			prefix1_479[i] = 0
 		}
 		blob6, _ := sh.NewBlob(n, prefix1_479, 0, nil)
+		commitment6, err := inc.CreateCommitment(blob6, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares6, _ := splitBlobs(blob6)
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", prefix1_479),
-			Shares:    toHexString(shares6),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", prefix1_479),
+			Shares:     toHexString(shares6),
+			Commitment: fmt.Sprintf("%x", commitment6),
 		})
 
 		randomKilobyte := make([]byte, 1024)
 		rand.Read(randomKilobyte)
 		blob7, _ := sh.NewBlob(n, randomKilobyte, 0, nil)
+		commitment7, err := inc.CreateCommitment(blob7, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares7, _ := splitBlobs(blob7)
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", randomKilobyte),
-			Shares:    toHexString(shares7),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", randomKilobyte),
+			Shares:     toHexString(shares7),
+			Commitment: fmt.Sprintf("%x", commitment7),
 		})
 
 		random10kb := make([]byte, 1024*10)
 		rand.Read(random10kb)
 		blob8, _ := sh.NewBlob(n, random10kb, 0, nil)
+		commitment8, err := inc.CreateCommitment(blob8, merkle.HashFromByteSlices, 64)
+		if err != nil {
+			fmt.Println("Error creating commitment:", err)
+			return
+		}
 		shares8, _ := splitBlobs(blob8)
 		vecs = append(vecs, testVector{
-			Namespace: fmt.Sprintf("%x", n.Bytes()),
-			Data:      fmt.Sprintf("%x", random10kb),
-			Shares:    toHexString(shares8),
+			Namespace:  fmt.Sprintf("%x", n.Bytes()),
+			Data:       fmt.Sprintf("%x", random10kb),
+			Shares:     toHexString(shares8),
+			Commitment: fmt.Sprintf("%x", commitment8),
 		})
 
 	}
